@@ -58,6 +58,14 @@ module TicketCamp
   def DetailUrls(url)
     doc = HtmlDoc(url)
 
+    urls = DetailUrlsOnePage(doc)
+    nextPageUrl = NextPage(doc)
+    urls << DetailUrls(nextPageUrl) unless nextPageUrl.empty?
+
+    urls.flatten
+  end
+
+  def DetailUrlsOnePage(doc)
     doc.css('li.unavailable').map { |unavailable|
       watch = unavailable.css('li.watch')[0]
 
@@ -72,33 +80,14 @@ module TicketCamp
     }.compact.reject(&:empty?)
   end
 
-  def tdInnerHtml(td, inners)
-    inners.map{ |inner|
-      html = td.css(inner)
+  def DetailHeadScrape(url)
+    doc = HtmlDoc(url)
 
-      next if html == nil
-      html.inner_html
+    ticket_info = doc.css('div.module-ticket-info')[0]
+    ticket_info.css('tr').map { |tr|
+      th = tr.css('th')[0]
+      th == nil ? '' : th.inner_html
     }
-  end
-
-  def Tag(doc, tagName)
-    doc.css(tagName).map { |t|
-      tag = TagScrape(t)
-      next tag unless tag.empty?
-      t.inner_html
-    }.compact.reject(&:empty?)
-  end
-
-  def TagScrape(doc)
-    atags = Tag(doc, 'a')
-    spantags = Tag(doc, 'span')
-    litags = Tag(doc, 'li')
-
-    return atags[0] if atags.size > 0
-    return spantags[0] if spantags.size > 0
-    return litags[0] if litags.size > 0
-
-    ''
   end
 
   def DetailScrape(url)
@@ -114,17 +103,29 @@ module TicketCamp
       next tag unless tag.empty?
 
       next td.inner_html
-    }.map { |v| v.gsub(/(\r\n|\r|\n|\f|\x20)/,"") }
+    }.map { |v|
+      v.gsub(/(\r\n|\r|\n|\f|\x20)/,"")
+    }
   end
 
-  def DetailHeadScrape(url)
-    doc = HtmlDoc(url)
+  def TagScrape(doc)
+    atags = Tag(doc, 'a')
+    spantags = Tag(doc, 'span')
+    litags = Tag(doc, 'li')
 
-    ticket_info = doc.css('div.module-ticket-info')[0]
-    ticket_info.css('tr').map { |tr|
-      th = tr.css('th')[0]
-      th == nil ? '' : th.inner_html
-    }
+    return atags[0] if atags.size > 0
+    return spantags[0] if spantags.size > 0
+    return litags[0] if litags.size > 0
+
+    ''
+  end
+
+  def Tag(doc, tagName)
+    doc.css(tagName).map { |t|
+      tag = TagScrape(t)
+      next tag unless tag.empty?
+      t.inner_html
+    }.compact.reject(&:empty?)
   end
 
   def NextPage(doc)
