@@ -12,7 +12,7 @@ module TicketCamp
   url = 'https://ticketcamp.net/'
 
   def HtmlDoc(url)
-    sleep(3)
+    sleep(4)
     charset = nil
 
     html = open(url) do |f|
@@ -167,11 +167,13 @@ module TicketCamp
       if index == 0
         csv.puts DetailHeadScrape(url)
       end
-      print "\r#{index+1}/#{urls_bundle.size} complete"
+      print "\r#{index+1}/#{urls_bundle.size} を抽出中"
       csv.puts DetailScrape(url)
     }
 
     csv.close
   end
+
+  print "完了!!"
 
 end
