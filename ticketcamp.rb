@@ -16,7 +16,7 @@ module TicketCamp
     charset = nil
 
     html = open(url) do |f|
-      charset = f.charset # 文字種別を取得
+      charset = f.charset
       f.read
     end
 
@@ -56,7 +56,6 @@ module TicketCamp
   end
 
   def DetailUrls(url)
-    p "url = #{url}"
     doc = HtmlDoc(url)
 
     doc.css('li.unavailable').map { |unavailable|
@@ -82,19 +81,55 @@ module TicketCamp
     }
   end
 
+  def TagScrape(doc)
+    atags = doc.css('a').map { |a|
+      tag = TagScrape(a)
+      next tag unless tag.empty?
+      a.inner_html
+    }.compact.reject(&:empty?)
+
+    spantags = doc.css('span').map { |span|
+      tag = TagScrape(span)
+      next tag unless tag.empty?
+      span.inner_html
+    }.compact.reject(&:empty?)
+
+    litags = doc.css('li').map { |li|
+      tag = TagScrape(li)
+      next tag unless tag.empty?
+      li.inner_html
+    }
+
+    return atags[0] if atags.size > 0
+    return spantags[0] if spantags.size > 0
+    return litags[0] if litags.size > 0
+
+    ''
+  end
+
   def DetailScrape(url)
     doc = HtmlDoc(url)
 
     ticket_info = doc.css('div.module-ticket-info')[0]
     ticket_info.css('tr').map { |tr|
-      th = tr.css('th')[0]
       td = tr.css('td')[0]
 
-      return '' if td == nil
+      next '' if td == nil
 
-      a = td.css('a')
-      return td.inner_html if a == nil
-      a.inner_html
+      tag = TagScrape(td)
+      next tag unless tag.empty?
+
+      next td.inner_html
+    }.map { |v| v.gsub(/(\r\n|\r|\n|\f|\x20)/,"") }
+  end
+
+  def DetailHeadScrape(url)
+    doc = HtmlDoc(url)
+
+    ticket_info = doc.css('div.module-ticket-info')[0]
+    ticket_info.css('tr').map { |tr|
+      th = tr.css('th')[0]
+      th == nil ? '' : th.inner_html
     }
   end
 
@@ -119,7 +154,7 @@ module TicketCamp
   inputs = STDIN.gets
   indexes = inputs.split(',').map(&:to_i).uniq
 
-  p "indexes = #{indexes}"
+  p "選択番号：#{indexes}"
 
   urls_bundle = results.map.with_index { |item, index|
     next unless indexes.include?(index)
@@ -134,6 +169,9 @@ module TicketCamp
     csv = CSV.open('scrape.csv','w')
 
     scrapes = urls_bundle.map.with_index { |url, index|
+      if index == 0
+        csv.puts DetailHeadScrape(url)
+      end
       print "\r#{index+1}/#{urls_bundle.size} complete"
       csv.puts DetailScrape(url)
     }
