@@ -81,24 +81,18 @@ module TicketCamp
     }
   end
 
+  def Tag(doc, tagName)
+    doc.css(tagName).map { |t|
+      tag = TagScrape(t)
+      next tag unless tag.empty?
+      t.inner_html
+    }.compact.reject(&:empty?)
+  end
+
   def TagScrape(doc)
-    atags = doc.css('a').map { |a|
-      tag = TagScrape(a)
-      next tag unless tag.empty?
-      a.inner_html
-    }.compact.reject(&:empty?)
-
-    spantags = doc.css('span').map { |span|
-      tag = TagScrape(span)
-      next tag unless tag.empty?
-      span.inner_html
-    }.compact.reject(&:empty?)
-
-    litags = doc.css('li').map { |li|
-      tag = TagScrape(li)
-      next tag unless tag.empty?
-      li.inner_html
-    }
+    atags = Tag(doc, 'a')
+    spantags = Tag(doc, 'span')
+    litags = Tag(doc, 'li')
 
     return atags[0] if atags.size > 0
     return spantags[0] if spantags.size > 0
