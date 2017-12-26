@@ -130,8 +130,9 @@ module TicketCamp
 
   def NextPage(doc)
     pagination = doc.css('div.pagination')[0]
-    next_page = pagination.css('li.next')[0]
+    return '' if pagination == nil
 
+    next_page = pagination.css('li.next')[0]
     return '' if next_page == nil
 
     href = next_page.css('a')[0][:href]
@@ -174,6 +175,6 @@ module TicketCamp
     csv.close
   end
 
-  print "完了!!"
+  print "\n完了!!"
 
 end
