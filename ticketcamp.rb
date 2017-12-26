@@ -26,41 +26,40 @@ module TicketCamp
 
   def TicketCampFreewordUrl(url, freeword)
     doc = HtmlDoc(url)
+    uri = URI.parse(url)
 
-    names = doc.xpath("//form[contains(@action, 'search')]").map { |form|
-      name = form.xpath("//input[@type='text']/@name")
-      '' if name == nil
-      action = form[:action]
-      uri = URI.parse(url)
-      uri.merge(action).to_s + "?#{name}=#{freeword}"
-    }.compact.reject(&:empty?)
-
-    URI.encode(names[0])
+    doc.xpath("//form[contains(@action, 'search')]")
+      .map { |form| [form.xpath("//input[@type='text']/@name"), form[:action]] }
+      .map { |items| items[0] == nil || items[1] == nil ? nil : items}
+      .compact
+      .map { |items| uri.merge(items[1]).to_s + "?#{items[0]}=#{freeword}"}
+      .map { |name| URI.encode(name)}[0]
   end
 
   def FreewordResults(search_url)
     doc = HtmlDoc(search_url)
 
-    section = doc.css('section.module-list-performer')
-    section.css('div.module-list-performer-row').map {|result|
-      clearfix = result.css('div.clearfix')
-
-      next if clearfix == nil
-
-      a = clearfix.css('a')[0]
-      text = a.inner_html
-      link = a[:href]
-      url = "https:#{link}"
-      {"#{text}" => "#{url}"}
-    }.compact.reject(&:empty?)
+    doc.xpath("//section[@class='module-list-performer']")
+      .map { |section| section.xpath("//div[@class='module-list-performer-row']") }
+      .flatten
+      .map { |result| result.css('div.clearfix') }
+      .compact
+      .map { |clearfix| clearfix.css('a')[0] }
+      .compact
+      .map { |a|
+        text = a.inner_html
+        link = a[:href]
+        url = "https:#{link}"
+        {"#{text}" => "#{url}"}
+      }.reject(&:empty?)
   end
 
   def DetailUrls(url)
     doc = HtmlDoc(url)
 
     urls = DetailUrlsOnePage(doc)
-    nextPageUrl = NextPage(doc)
-    urls << DetailUrls(nextPageUrl) unless nextPageUrl.empty?
+    next_url = NextPage(doc)
+    urls << DetailUrls(next_url) unless next_url.empty?
 
     urls.flatten
   end
@@ -120,8 +119,8 @@ module TicketCamp
     ''
   end
 
-  def Tag(doc, tagName)
-    doc.css(tagName).map { |t|
+  def Tag(doc, tag_name)
+    doc.css(tag_name).map { |t|
       tag = TagScrape(t)
       next tag unless tag.empty?
       t.inner_html
@@ -139,8 +138,8 @@ module TicketCamp
     'https:' + href
   end
 
-  freewordUrl = TicketCampFreewordUrl(url, ARGV[0])
-  results = FreewordResults(freewordUrl)
+  freeword_url = TicketCampFreewordUrl(url, ARGV[0])
+  results = FreewordResults(freeword_url)
 
   p "以下から番号を選択(カンマ(,)区切りで複数可)"
   results.each_with_index do |item, index|
@@ -164,12 +163,12 @@ module TicketCamp
   if ipt == "y\n"
     csv = CSV.open('scrape.csv','w')
 
-    scrapes = urls_bundle.map.with_index { |url, index|
+    scrapes = urls_bundle.map.with_index { |url_text, index|
       if index == 0
-        csv.puts DetailHeadScrape(url)
+        csv.puts DetailHeadScrape(url_text)
       end
       print "\r#{index+1}/#{urls_bundle.size} を抽出中"
-      csv.puts DetailScrape(url)
+      csv.puts DetailScrape(url_text)
     }
 
     csv.close
