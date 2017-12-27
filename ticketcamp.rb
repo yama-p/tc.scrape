@@ -67,11 +67,9 @@ module TicketCamp
   def DetailUrlsOnePage(doc)
     doc.css('li.unavailable').map { |unavailable|
       watch = unavailable.css('li.watch')[0]
-
       next if watch == nil
 
       ticket_status = watch.css('span.text-muted')[0].inner_html
-
       next unless ticket_status == '取引中'
 
       img = unavailable.css('li.img')[0]
@@ -91,6 +89,15 @@ module TicketCamp
 
   def DetailScrape(url)
     doc = HtmlDoc(url)
+
+    # doc.xpath("//div[@class='module-ticket-info']")
+    #   .map { |info| info.xpath("//tr") }
+    #   .flatten
+    #   .map { |tr| tr.xpath("//td") }
+    #   .flatten.compact
+    #   .map { |td| [TagScrape(td), td.inner_html] }
+    #   .map { |items| items[0].empty? ? items[1] : items[0] }
+    #   .map { |item| item.gsub(/(\r\n|\r|\n|\f|\x20)/,"") }
 
     ticket_info = doc.css('div.module-ticket-info')[0]
     ticket_info.css('tr').map { |tr|
@@ -138,9 +145,13 @@ module TicketCamp
     'https:' + href
   end
 
-  freeword_url = TicketCampFreewordUrl(url, ARGV[0])
-  results = FreewordResults(freeword_url)
+  # ------------------------------------------------------------ #
 
+  # フリーワード検索
+  freeword_url = TicketCampFreewordUrl(url, ARGV[0])
+
+  # フリーワード検索結果
+  results = FreewordResults(freeword_url)
   p "以下から番号を選択(カンマ(,)区切りで複数可)"
   results.each_with_index do |item, index|
     p "#{index} : #{item.keys[0]}"
@@ -151,6 +162,7 @@ module TicketCamp
 
   p "選択番号：#{indexes}"
 
+  # 「取引中」のチケット数
   urls_bundle = results.map.with_index { |item, index|
     next unless indexes.include?(index)
     DetailUrls(item.values[0])
@@ -163,6 +175,7 @@ module TicketCamp
   if ipt == "y\n"
     csv = CSV.open('scrape.csv','w')
 
+    # チケット詳細のスクレイピング
     scrapes = urls_bundle.map.with_index { |url_text, index|
       if index == 0
         csv.puts DetailHeadScrape(url_text)
