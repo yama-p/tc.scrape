@@ -102,13 +102,12 @@ module TicketCamp
     ticket_info = doc.css('div.module-ticket-info')[0]
     ticket_info.css('tr').map { |tr|
       td = tr.css('td')[0]
-
       next '' if td == nil
 
       tag = TagScrape(td)
       next tag unless tag.empty?
 
-      next td.inner_html
+      td.inner_html
     }.map { |v|
       v.gsub(/(\r\n|\r|\n|\f|\x20)/,"")
     }
@@ -152,15 +151,15 @@ module TicketCamp
 
   # フリーワード検索結果
   results = FreewordResults(freeword_url)
-  p "以下から番号を選択(カンマ(,)区切りで複数可)"
+  puts "\n\e[1m\e[32m 以下から番号を選択 ( カンマ(,)区切りで複数可 ) \e[0m\n"
   results.each_with_index do |item, index|
-    p "#{index} : #{item.keys[0]}"
+    puts "#{index} : #{item.keys[0]}"
   end
 
   inputs = STDIN.gets
   indexes = inputs.split(',').map(&:to_i).uniq
 
-  p "選択番号：#{indexes}"
+  puts "\n選択番号：#{indexes}"
 
   # 「取引中」のチケット数
   urls_bundle = results.map.with_index { |item, index|
@@ -168,7 +167,7 @@ module TicketCamp
     DetailUrls(item.values[0])
   }.flatten.compact.reject(&:empty?)
 
-  p "#{urls_bundle.size}個の「取引中」のチケット詳細が見つかりました。詳細を抽出しますか。y/n"
+  puts "\n\e[1m\e[32m #{urls_bundle.size} 個の「取引中」のチケット詳細が見つかりました。詳細を抽出しますか。(y/n)  \e[0m\n"
 
   ipt = STDIN.gets
 
@@ -180,13 +179,13 @@ module TicketCamp
       if index == 0
         csv.puts DetailHeadScrape(url_text)
       end
-      print "\r#{index+1}/#{urls_bundle.size} を抽出中"
+      print "\r\e[1m\e[35m #{index+1}/#{urls_bundle.size} を抽出中 \e[0m"
       csv.puts DetailScrape(url_text)
     }
 
     csv.close
   end
 
-  print "\n完了!!"
+  puts "\n\e[1m\e[32m 完了 !!\e[0m"
 
 end
